@@ -1,0 +1,44 @@
+依赖
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+<dependency>
+    <groupId>com.ibeetl</groupId>
+    <artifactId>beetl</artifactId>
+    <version>2.3.2</version>
+</dependency>
+<dependency>
+    <groupId>com.ibeetl</groupId>
+    <artifactId>beetlsql</artifactId>
+    <version>2.3.1</version>
+</dependency>
+
+数据库
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <scope>runtime</scope>
+</dependency>
+连接池类
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.0.29</version>
+</dependency>
+
+整合阶段
+由于springboot没有对 beatlsql的快速启动装配，所以需要我自己导入相关的bean，包括数据源，包扫描，事物管理器等
+
+在application加入 代码：
+    BeetlGroupUtilConfiguration
+    BeetlSpringViewResolver
+    BeetlSqlScannerConfigurer
+    SqlManagerFactoryBean
+    DataSource
+    DataSourceTransactionManager
+在resouces包下，加META_INF文件夹，文件夹中加入spring-devtools.properties:
+restart.include.beetl=/beetl-2.3.2.jar
+restart.include.beetlsql=/beetlsql-2.3.1.jar
+在templates下加一个index.btl文件。
