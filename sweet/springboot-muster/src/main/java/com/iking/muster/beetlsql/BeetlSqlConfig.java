@@ -67,7 +67,7 @@ public class BeetlSqlConfig {
     //配置数据库
     @Bean(name = "datasource")
     public DataSource getDataSource() {
-        return DataSourceBuilder.create().url("jdbc:mysql://192.168.1.4:3306/bing-upms").username("root").password("ikingtech2018").build();
+        return DataSourceBuilder.create().url("jdbc:mysql://127.0.0.1:3306/bing-upms").username("root").password("123.com").build();
     }
 
     @Bean(name = "sqlManagerFactoryBean")
