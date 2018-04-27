@@ -1,0 +1,438 @@
+
+
+3.2.1. 简单查询（自动生成sql）
+
+public T unique(Class clazz,Object pk) 根据主键查询，如果未找到，抛出异常.
+public T single(Class clazz,Object pk) 根据主键查询，如果未找到，返回null.
+
+public List all(Class clazz) 查询出所有结果集
+public List all(Class clazz, int start, int size) 翻页
+public int allCount(Class<?> clazz) 总数
+
+3.2.3 template查询
+public List template(T t) 根据模板查询，返回所有符合这个模板的数据库 同上，mapper可以提供额外的映射，如处理一对多，一对一
+public   T templateOne(T t) 根据模板查询，返回一条结果，如果没有找到，返回null
+public List template(T t,int start,int size) 同上，可以翻页
+public long templateCount(T t) 获取符合条件的个数
+public List template(Class target,Object paras,long start, long size) 模板查询，参数是paras，可以是Map或者普通对象
+public long templateCount(Class target, Object paras) 获取符合条件个数
+
+翻页的start，系统默认位从1开始，为了兼容各个数据库系统，会自动翻译成数据库习俗，比如start为1，会认为mysql，postgres从0开始（从start－1开始），oralce，sqlserver，db2从1开始（start－0）开始。
+
+
+3.2.4. 通过sqlid查询,sql语句在md文件里
+public List select(String sqlId, Class clazz, Map<String, Object> paras) 根据sqlid来查询，参数是个map
+public List select(String sqlId, Class clazz, Object paras) 根据sqlid来查询，参数是个pojo
+public List select(String sqlId, Class clazz) 根据sqlid来查询，无参数
+public T selectSingle(String id,Object paras, Class target) 根据sqlid查询，输入是Pojo，将对应的唯一值映射成指定的target对象，如果未找到，则返回空。需要注意的时候，有时候结果集本身是空，这时候建议使用unique
+public T selectSingle(String id,Map<String, Object> paras, Class target) 根据sqlid查询，输入是Map，将对应的唯一值映射成指定的target对象，如果未找到，则返回空。需要注意的时候，有时候结果集本身是空，这时候建议使用unique
+public T selectUnique(String id,Object paras, Class target) 根据sqlid查询，输入是Pojo或者Map，将对应的唯一值映射成指定的target对象,如果未找到，则抛出异常
+public T selectUnique(String id,Map<String, Object> paras, Class target) 根据sqlid查询，输入是Pojo或者Map，将对应的唯一值映射成指定的target对象,如果未找到，则抛出异常
+public Integer intValue(String id,Object paras) 查询结果映射成Integer，如果找不到，返回null，输入是object
+public Integer intValue(String id,Map paras) 查询结果映射成Integer，如果找不到，返回null，输入是map，其他还有 longValue，bigDecimalValue
+注意，对于Map参数来说，有一个特殊的key叫着_root,它代表了查询根对象，sql语句中未能找到的变量都会在试图从_root 中查找。 在Map中使用_root, 可以混合为sql提供参数
+
+
+3.2.5 指定范围查询
+public List select(String sqlId, Class clazz, Map<String, Object> paras, int start, int size)， 查询指定范围
+public List select(String sqlId, Class clazz, Object paras, int start, int size) ，查询指定范围
+beetlsql 默认从1 开始，自动翻译为目标数据库的的起始行，如mysql的0，oracle的1
+
+
+3.3 翻页查询API
+public <T> void pageQuery(String sqlId,Class<T> clazz,PageQuery query)
+BeetlSQL 提供一个PageQuery对象,用于web应用的翻页查询,BeetlSql假定有sqlId 和sqlId$count,俩个sqlId,并用这来个来翻页和查询结果总数.如:
+
+    queryNewUser
+    ===
+    select * from user order by id desc ;
+
+    queryNewUser$count
+    ===
+    select count(1) from user
+
+    对于俩个相似的sql语句,你可以使用use函数,把公共部分提炼出来.
+    大部分情况下,都不需要2个sql来完成,一个sql也可以,要求使用page函数或者pageTag标签,这样才能同时获得查询结果集总数和当前查询的结果
+    queryNewUser
+    ===
+    select
+    @pageTag(){
+    a.*,b.name role_name
+    @}
+    from user a left join b ...
+    如上sql,会在pageQuery查询的时候转为俩条sql语句
+    select count(1) from user a left join b...
+    select a.*,b.name role_name  from user a left join b...
+
+
+3.4. 更新API
+添加，删除和更新均使用下面的API
+
+3.4.1. 自动生成sql
+public void insert(Object paras) 插入paras到paras关联的表
+public void insert(Object paras,boolean autoAssignKey) 插入paras到paras对象关联的表,并且指定是否自动将数据库主键赋值到paras里,适用于对于自增或者序列类数据库产生的主健
+public void insertTemplate(Object paras) 插入paras到paras关联的表,忽略为null值或者为空值的属性
+public void insertTemplate(Object paras,boolean autoAssignKey) 插入paras到paras对象关联的表,并且指定是否自动将数据库主键赋值到paras里,忽略为null值或者为空值的属性，调用此方法，对应的数据库必须主键自增。
+public void insert(Class<?> clazz,Object paras) 插入paras到clazz关联的表
+public void insert(Class<?> clazz,Object paras,KeyHolder holder)，插入paras到clazz关联的表，如果需要主键，可以通过holder的getKey来获取，调用此方法，对应的数据库必须主键自增
+public int insert(Class clazz,Object paras,boolean autoAssignKey) 插入paras到clazz关联的表，并且指定是否自动将数据库主键赋值到paras里，调用此方法，对应的数据库必须主键自增。
+public int updateById(Object obj) 根据主键更新，所有值参与更新
+public int updateTemplateById(Object obj) 根据主键更新，属性为null的不会更新
+public int updateBatchTemplateById(Class clazz,List<?> list) 批量根据主键更新,属性为null的不会更新
+public int updateTemplateById(Class<?> clazz，Map paras) 根据主键更新，组件通过clazz的annotation表示，如果没有，则认为属性id是主键,属性为null的不会更新。
+public int[] updateByIdBatch(List<?> list) 批量更新
+public void insertBatch(Class clazz,List<?> list) 批量插入数据
+
+
+3.4.2. 通过sqlid更新（删除）
+public int insert(String sqlId,Object paras,KeyHolder holder) 根据sqlId 插入，并返回主键，主键id由paras对象所指定，调用此方法，对应的数据库表必须主键自增。
+public int insert(String sqlId,Object paras,KeyHolder holder,String keyName) 同上，主键由keyName指定
+public int insert(String sqlId,Map paras,KeyHolder holder,String keyName)，同上，参数通过map提供
+public int update(String sqlId, Object obj) 根据sqlid更新
+public int update(String sqlId, Map<String, Object> paras) 根据sqlid更新，输出参数是map
+public int[] updateBatch(String sqlId,List<?> list) 批量更新
+public int[] updateBatch(String sqlId,Map<String, Object>[] maps) 批量更新，参数是个数组，元素类型是map
+
+
+6. 使用Mapper
+SQLManager 提供了所有需要知道的API，但通过sqlid来访问sql有时候还是很麻烦，因为需要手敲字符串，另外参数不是map就是para，对代码理解没有好处，BeetlSql支持Mapper，将sql文件映射到一个interface接口。接口的方法名与sql文件desqlId一一对应。
+
+接口必须实现BaseMapper接口（后面可以自定义一个Base接口），它提供内置的CRUID方法，如insert,unique,template,templateOne ,updateById等
+
+BaseMapper 具备数据库常见的操作，接口只需要定义额外的方法与sqlId同名即可。
+
+public interface UserDao extends BaseMapper<User> {
+	List<User> select(String name);
+}
+如上select将会对应如下md文件
+
+select
+===
+
+	select * from user where name = #name#
+
+如果你使用JDK8，不必为参数提供名称，自动对应。但必须保证java编译的时候开启-parameter选项。如果使用JDK8以下的版本，则可以使用@Param注解()
+
+
+List<User> select(@Param("name") String name);
+BeetlSql的mapper方法总会根据调用方法名字，返回值，以及参数映射到SQLManager相应的查询接口，比如返回类型是List，意味着发起SQLManager.select 查询，如果返回是一个Map或者Pojo，则发起一次selectSingle查询，如果返回定义为List，则表示查询实体，如果定义为List ，则对应的查询结果映射为Long
+
+
+
+Mapper 对应的sql文件默认根据实体来确定，如实体是User对象，则对应的sql文件是user.md(sql),可以通过@SqlResource 注解来指定Mapper对应的sql文件。比如
+@SqlResource("core.user")
+public interface UserCoreDao extends BaseMapper<User> {
+	List<User> select(String name);
+}
+@SqlResource("console.user")
+public interface UserConsoleDao extends BaseMapper<User> {
+	List<User> select(String name);
+}
+
+6.4. 更新语句
+更新语句返回的结果可以是void，或者int，如果是批量更新，则可以返回int[]
+
+public int updaetUser(int id,String name);
+public int updateUser(User user);
+public int[] updateAll(List<User> list);
+BeetlSql 通常根据返回值是int或者int[] 来判断是否是更新还是批量更新，如果没有返回值，会进一步判断第一个参数是否是集合或者数组，比如
+
+public void updateAllByUser(List<User> list);
+public void updateAllByIds(List<Integer> list);
+Beetl会假设前者是批量更新，而后者只是普通更新。建议还是不要使用void，而使用int或者int[]来帮助区分
+
+6.5. 插入语句
+插入语句同更新语句，唯一不同的是插入语句有时候需要获取自增序列值，这时候使用KeyHolder作为返回参数
+public KeyHolder insertSql(User user);
+
+6.6. 使用JDBC SQL 可以通过@Sql注解直接在java中使用较为简单的sql语句，如下
+
+@Sql(value=" update user set age = ? where id = ? ")
+public void updateAge(int age,int id);
+@Sql(value="select id from user where create_time<?")
+public List<Long> selectIds(Date date)
+此时方法参数与”?” 一一对应 也可以使用@Sql翻页，这要求方法参数前俩个必须是int或者long,返回结果使用PageQuery定义
+
+@Sql(value="select * from user where create_time<?")
+public PageQuery selectUser(int pageNumber,int pageSize,Date date)
+
+6.7. Mapper中的注解
+从上面我们已经了解了@Param注解，用于申明参数名字，如果使用jdk8，且打开了编译选项parameter，则可以去掉@Param注解 @RowStart和 @RowSize，用于查询中的范围查询。 @Sql 注解则用于在java中构造一个简短的jdbc sql语句。
+@SqlStatment 注解可以对接口参数进一步说明，他有如下属性
+type,用于说明sqlId是何种类型的语句，默认为auto，BeetlSql将会根据sqlId对应的Sql语句判断是否是查询，还是修改语句等，通常是根据sql语句的第一个词来判断，如果是select，表示查询，如果是insert，表示新增，如果update，drop，则是更新。如果Sql模板语句第一个词不包含这些，则需要用type做说明
+params 可以不用在接口参数上使用@Param，而直接使用params 属性，如下是等价的
+@SqlStatement(params="name,age,_st,_sz")
+public List<User> queryUser( String name, Integer age,int start, int size);
+
+public List<User> queryUser( @Param(name) String name, @Param(age) @RowStart Integer age,int start, @RowSize int size);
+
+
+7. BeetlSQL Annotation
+对于自动生成的sql，默认不需要任何annotaton，类名对应于表名（通过NameConversion类），getter方法的属性名对应于列明（也是通过NameConversion类），但有些情况还是需要annotation。
+
+7.1. @AutoID 和 @AssignID ，@SeqID
+@AutoID,作用于属性字段或者getter方法，告诉beetlsql，这是自增主键,对应于数据自增长
+@AssignID，作用于属性字段或者getter方法，告诉beetlsql，这是程序设定
+    @AssignID()
+    public Long getId() {
+        return id;
+    }
+代码设定主键允许像@AssignID 传入id的生成策略以自动生成序列，beetl默认提供了一个snowflake算法，一个用于分布式环境的id生成器
+@AssignID("simple")
+public Long getId() {
+	return id;
+}
+
+simple 是beetlsql提供的一个默认的snowflake实现，你可以通过sqlManager自己注册id生成器
+
+sqlManager.addIdAutonGen("uuid2", new IDAutoGen(){
+	@Override
+	public Object nextID(String params) {
+		return "hi"+new Random().nextInt(10000);
+	}
+});
+@AssignID("uuid2")
+public Long getId() {
+	return id;
+}
+对于属性名为id的自增主键，不需要加annotation，beetlsql默认就是@AutoID
+
+7.2. @Tail
+@Tail作用于类上，表示该对象是混合模型
+
+7.3. 忽略属性
+BeetlSql提供InsertIgnore,UpdateIgnore俩个注解,作用于属性字段或者getter方法，前者用于内置插入的时候忽略，后者用于内置更新的时候忽略。
+
+@UpdateIgnore
+public Date getBir(){
+	return  bir;
+}
+在beetlsql较早版本提供了ColumnIgnore， 提供insert或者update属性用来忽略
+
+@ColumnIgnore(insert=true,update=false)
+public Date getBir(){
+	return  bir;
+}
+如上例子，插入的时候忽略bir属性（往往是因为数据库指定了默认值为当前时间），更新的时候不能忽略 @ColumnIgnore的insert默认是true，update是false，因此也可以直接用 @ColumnIgnore()
+
+@EnumMapping
+对于Entity使用了枚举作为属性值，可以再枚举类上定义EnumMapping，指出如何将枚举与数据库值互相转化，有四种方法
+
+如果没有使用@EnumMapping，则使用枚举的名称作为属性
+@EnumMapping(EnumMapping.EnumType.STRING) 同上，使用枚举名称作为属性，数据库对应列应该是字符列
+@EnumMapping(EnumMapping.EnumType.ORDINAL) 使用枚举的顺序作为属性，数据库对应列应该是int类型，用此作为映射需要防止重构枚举的时候导致数据库也重构，应该慎用
+@EnumMapping(“xxx”)，如果不是上面的的定义，则beetlsql会查找枚举类的xxx属性，用这个值作为属性，比如
+@EnumMapping("value")
+public enum Color {
+	RED("RED",1),BLUE ("BLUE",2);
+	private String name;
+	private int value;
+	private Color(String name, int value) {
+	    this.name = name;
+	    this.value = value;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public int getValue() {
+		return value;
+	}
+	public void setValue(int value) {
+		this.value = value;
+	}
+
+}
+beetlsq 会获取枚举的value属性（调用getValue)来获取枚举属性值
+
+@Table
+标签 @Table(name=”xxxx”) 告诉beetlsql，此类对应xxxx表。比如数据库有User表，User类对应于User表，也可以创建一个UserQuery对象，也对应于User表
+
+@Table(name="user")
+public class QueryUser ..
+注：可以为对象指定一个数据库shcema，如name=”cms.user”,此时将访问cms库（或者cms用户，对不同的数据库，称谓不一样）下的user数据表
+
+
+
+7.6. @TableTemplate
+@TableTemplate() 用于模板查询，如果没有任何值，将按照主键降序排，也就是order by 主键名称 desc
+@DateTemplate()，作用于日期字段的属性字段或者getter方法，有俩个属性accept 和 compare 方法，分别表示 模板查询中，日期字段如果不为空，所在的日期范围，如
+@DateTemplate(accept="minDate,maxDate",compare=">=,<")
+	public Date getDate() {
+}
+在模板查询的时候，将会翻译成
+
+@if(!isEmpty(minDate)){
+ and date>=#minDate#
+@}
+@if(!isEmpty(maxDate)){
+ and date<#maxDate#
+@}
+minDate,maxDate 是俩个额外的变量,需要定义到pojo类里，DateTemplate也可以有默认值，如果@DateTemplate()，相当于@DateTemplate(accept=”min日期字段,max日期字段”,compare=”>=,<”)
+
+7.7. Mapper相关注解
+Mapper 是将sql模板文件映射成一个具体的Dao方法类,这样方便代码开发和维护
+
+Mapper中的注解，包括常用的	SqlStatement ，SqlStatementType ，Sql,Param 还有不常用的 RowSize ，RowStart，具体参考Mapper
+
+
+7.10 @SqlResource
+用在Mapper接口上，说明MD文件的位置，可以通过此注解指定一个在根目录下的某一个子目录位置。
+
+@SqlResource("platform.sysDict")
+public interface SysDictDao extends BaseMapper<SysDict> {
+   public List<SysDict> findAllList(@Param(value = "type") String type);
+}
+如上findAllList方法对应的sql，将位于resources/sql/platform/sysDict.md(sql)里。
+
+
+
+
+8. BeetlSQL 数据模型
+BeetlSQL是一个全功能DAO工具，支持的模型也很全面，包括
+
+Pojo, 也就是面向对象Java Object。Beetlsql操作将选取Pojo的属性和sql列的交集。额外属性和额外列将忽略.
+Map/List, 对于一些敏捷开发，可以直接使用Map/List 作为输入输出参数
+List<Map<String,Object>> list = sqlManager.select("user.find",Map.class,paras);
+混合模型，推荐使用混合模型。兼具灵活性和更好的维护性。Pojo可以实现Tail（尾巴的意思)，或者继承TailBean，这样查询出的ResultSet 除了按照pojo进行映射外，无法映射的值将按照列表/值保存。如下一个混合模型:
+/*混合模型*/
+public User extends TailBean{
+	private int id ;
+	private String name;
+	private int roleId;
+	/*以下是getter和setter 方法*/
+}
+对于sql语句:
+
+selectUser
+===
+select u.*,r.name r_name from user u left join role r on u.roleId=r.id .....
+执行查询的时候
+
+List<User> list = sqlManager.select("user.selectUser",User.class,paras);
+for(User user:list){
+	System.out.println(user.getId());
+	System.out.println(user.get("rName"));
+}
+程序可以通过get方法获取到未被映射到pojo的值，也可以在模板里直接 ${user.rName} 显示（对于大多数模板引擎都支持）
+
+另外一种更自由的实现混合模型的方法是在目标Pojo上采用注解@Tail，如果注解不带参数，则默认会调用set(String,Object) 方法来放置额外的查询属性，否则，依据注解的set参数来确定调用方法
+
+@Tail(set="addValue")
+public class User  {
+	private Integer id ;
+	private Integer age ;
+	public User addValue(String str,Object ok){
+		ext.put(str, ok);
+		return this;
+	}
+
+
+9. Markdown方式管理
+文件一些说明，放在头部可有可无，如果有说明，可以是任意文字
+SQL标示
+===
+以*开头的注释
+SQL语句
+
+SQL标示2
+===
+SQL语句 2
+
+
+所有SQL文件建议放到一个sql目录，sql目录有多个子目录，表示数据库类型，这是公共SQL语句放到sql目录下，特定数据库的sql语句放到各自自目录下 当程序获取SQL语句得时候，先会根据数据库找特定数据库下的sql语句，如果未找到，会寻找sql下的。
+List<User> list = sqlManager.select("user.select",User.class);
+SqlManager 会根据当前使用的数据库，先找sql/mysql/user.md 文件，确认是否有select语句，如果没有，则会寻找sql/user.md
+
+
+10. SQL 注释
+对于采用Markdown方式，可以采用多种方式对sql注释。
+
+采用sql 自己的注释符号，”– “ ,优点是适合java和数据库sql之间互相迁移，如
+select * from user where
+--  status 代表状态
+statu = 1
+
+采用beetl注释
+select * from user where
+@ /* 这些sql语句被注释掉
+statu = 1
+@ */
+
+在sqlId 的=== 紧挨着的下一行 后面连续使用“*”作为sql整个语句注释
+selectByUser
+===
+* 这个sql语句用来查询用户的
+* status =1 表示查找有效用户
+
+select * from user where status = 1
+
+
+11. (重要) 配置beetlsql
+beetlsql 配置文件是 btsql-ext.properties，位于classpath 根目录下，如果没有此文件，beetlsql将使用系统默认配置，如 * 是开发模式，
+beetlsql每次运行sql都会检测sql文件是否变化，并重新加载 * 字符集，是系统默认的字符集 * 翻页默认总是从1开始，
+对于oralce数据库来说，翻页起始参数正合适。对于mysql其他数据库来说，beetlsql，翻页参数变成n-1.一般你不需要关心
+
+11.1. 开发模式和产品模式
+beetlsql默认是开发模式，因此修改md的sql文件，不需要重启。但建议线上不要使用开发模式，因为此模式会每次sql调用都会检测md文件是否变化。
+可以通过修改/btsql-ext.properties ,修改如下属性改为产品模式
+
+PRODUCT_MODE = true
+
+11.2. NameConversion
+数据库字段名与java属性名的映射关系必须配置正确，否则会导致各种问题，如下是一些建议
+
+字段名字是user_id, java属性名是userId, 则使用UnderlinedNameConversion
+字段名是userId, java属性名是userId，则使用DefaultNameConversion
+
+如果是其他映射关系，可以考虑自己实现NameConversion接口
+
+
+11.3. 模板字符集
+默认sql模板文件采用的是系统默认字符集，可以更改配置采用指定的字符集
+
+CHARSET = UTF-8
+11.4. 翻页起始参数是0还是1
+默认认为1对应于翻页的第一条记录，如果你习惯mysql 那种0对应于第一条记录，则需要配置OFFSET_START_ZERO，设置为true
+
+OFFSET_START_ZERO =  true
+
+11.5. 自定义方法和标签函数
+可以在sql模板中使用自定义方法和标签函数，具体请参考beetl使用说明，如下是默认配置
+FN.use = org.beetl.sql.core.engine.UseFunction
+FN.globalUse = org.beetl.sql.core.engine.GlobalUseFunction
+FN.text = org.beetl.sql.core.engine.TextFunction
+FN.join = org.beetl.sql.ext.JoinFunction
+FN.isEmpty=org.beetl.sql.ext.EmptyExpressionFunction
+FN.page=org.beetl.sql.core.engine.PageQueryFuntion
+TAG.trim= org.beetl.sql.core.engine.TrimTag
+TAG.pageTag= org.beetl.sql.core.engine.PageQueryTag
+
+EmptyExpressionFunction 用在很多地方,如template 类操作,where语句里的条件判断,它 沿用了beetl习惯,对于不存在的变量,或者为null的变量,都返回true,
+同时如果是字符串,为空字符串也返回true,数组,集合也是这样,有些项目,认为空字符串应该算有值而不应该返回true,你可以参考EmptyExpressionFunction的实现,
+按照项目语义来定义isEmpty
+
+11.6. isEmpty 和 isNotEmpty
+模板类查询和模板更新，以及Sql语句里的判断都依赖于isEmpty函数判断变量是否存在以及是否为null，2.8.4以前版本对空字符串也认为是空，2.8.4之后版本则仅仅判断对象是否存在以及是否为null
+where 1=1
+@if(!isEmpty(connent)){
+  and
+@}
+
+
+20. 代码生成
+20.1. 生成pojo 和 md文件
+​beetsql支持调用SQLManager.gen… 方法生成表对应的pojo类，如：
+
+SQLManager sqlManager = new SQLManager(style,loader,cs,new DefaultNameConversion(), new Interceptor[]{new DebugInterceptor()});
+//sql.genPojoCodeToConsole("userRole"); 快速生成，显示到控制台
+// 或者直接生成java文件
+GenConfig config = new GenConfig();
+config.preferBigDecimal(true);
+config.setBaseClass("com.test.User");
+sqlManager.genPojoCode("UserRole","com.test",config);
+生成的路径位于工程的scr目录下，beetlsql自动判断是传统java项目还是maven项目，以使得生成的代码和sql放到正确的位置上。你也可以通过调用GenKit.setSrcPathRelativeToSrc 来设置代码生成路径，调用setResourcePathRelativeToSrc来设置生成的sql文件路径
+
+config 类用来配置生成喜好,目前支持生成pojo是否继承某个基类, 是否用BigDecimal代替Double,是否采用Date而不是Timestamp来表示日期，是否是直接输出到控制台而不是文件等

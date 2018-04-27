@@ -1,0 +1,81 @@
+依赖
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+<dependency>
+    <groupId>com.ibeetl</groupId>
+    <artifactId>beetl</artifactId>
+    <version>2.3.2</version>
+</dependency>
+<dependency>
+    <groupId>com.ibeetl</groupId>
+    <artifactId>beetlsql</artifactId>
+    <version>2.3.1</version>
+</dependency>
+
+数据库
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <scope>runtime</scope>
+</dependency>
+连接池类
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid</artifactId>
+    <version>1.0.29</version>
+</dependency>
+
+整合阶段
+由于springboot没有对 beatlsql的快速启动装配，所以需要我自己导入相关的bean，包括数据源，包扫描，事物管理器等
+
+在application加入 代码：
+    BeetlGroupUtilConfiguration
+    BeetlSpringViewResolver
+    BeetlSqlScannerConfigurer
+    SqlManagerFactoryBean
+    DataSource
+    DataSourceTransactionManager
+在resouces包下，加META_INF文件夹，文件夹中加入spring-devtools.properties:
+restart.include.beetl=/beetl-2.3.2.jar
+restart.include.beetlsql=/beetlsql-2.3.1.jar
+在templates下加一个index.btl文件。
+
+
+
+
+
+
+SpringBoot集成
+<dependency>
+	<groupId>com.ibeetl</groupId>
+	<artifactId>beetl-framework-starter</artifactId>
+	<version>1.1.45.RELEASE</version>
+</dependency>
+@Configuration
+public class DataSourceConfig {
+
+ @Bean(name="datasource")
+  public DataSource datasource(Environment env) {
+    HikariDataSource ds = new HikariDataSource();
+    ds.setJdbcUrl(env.getProperty("spring.datasource.url"));
+    ds.setUsername(env.getProperty("spring.datasource.username"));
+    ds.setPassword(env.getProperty("spring.datasource.password"));
+    ds.setDriverClassName(env.getProperty("spring.datasource.driver-class-name"));
+    return ds;
+  }
+}
+
+
+beetl-framework-starter 会读取application.properites如下配置
+beetlsql.sqlPath，默认为/sql, 作为存放sql文件的根目录，位于/resources/sql目录下
+beetlsql.nameConversion: 默认是org.beetl.sql.core.UnderlinedNameConversion,能将下划线分割的数据库命名风格转化为java驼峰命名风格，还有常用的DefaultNameConversion，数据库命名完全和Java命名一直，以及JPA2NameConversion，兼容JPA命名
+beetl-beetlsql.dev：默认是true，即向控制台输出执行时候的sql，参数，执行时间，以及执行的位置，每次修改sql文件的时候，自动检测sql文件修改.
+beetlsql.daoSuffix：默认为Dao。
+beetlsql.basePackage：默认为com，此选项配置beetlsql.daoSuffix来自动扫描com包极其子包下的所有以Dao结尾的Mapper类。以本章例子而言，你可以配置“com.bee.sample.ch5.dao”
+beetlsql.dbStyle ：数据库风格，默认是org.beetl.sql.core.db.MySqlStyle.对应不同的数据库，其他还有OracleStyle，PostgresStyle,SqlServerStyle,DB2SqlStyle,SQLiteStyle,H2Style
+
+
+

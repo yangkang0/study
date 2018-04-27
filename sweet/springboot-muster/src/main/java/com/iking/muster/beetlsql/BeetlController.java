@@ -1,6 +1,8 @@
 package com.iking.muster.beetlsql;
 
+import com.iking.muster.beetlsql.bean.BmAccount;
 import com.iking.muster.beetlsql.dao.BeetlAccountDao;
+import org.beetl.sql.core.SQLManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,4 +36,14 @@ public class BeetlController {
     public BmAccount getAccountByName( ){
         return  beetlAccountDao.selectAccountByName("李四");
     }
+
+    @Autowired
+    SQLManager sqlManager;
+
+    @GetMapping(value = "beetl/code/{tablename}")
+    public  void createCode(@PathVariable("tablename") String tablename) throws  Exception {
+        sqlManager.genPojoCodeToConsole(tablename);
+        sqlManager.genSQLTemplateToConsole(tablename);
+    }
+
 }
