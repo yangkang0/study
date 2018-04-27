@@ -1,6 +1,6 @@
 package com.iking.muster.beetlsql.dao;
 
-import com.iking.muster.beetlsql.BmAccount;
+import com.iking.muster.beetlsql.bean.BmAccount;
 import org.beetl.sql.core.annotatoin.SqlResource;
 import org.beetl.sql.core.mapper.BaseMapper;
 

@@ -1,5 +1,6 @@
 package com.iking.muster.beetlsql;
 
+import com.zaxxer.hikari.HikariDataSource;
 import org.beetl.core.resource.WebAppResourceLoader;
 import org.beetl.ext.spring.BeetlGroupUtilConfiguration;
 import org.beetl.ext.spring.BeetlSpringViewResolver;
@@ -12,10 +13,12 @@ import org.beetl.sql.ext.spring4.BeetlSqlDataSource;
 import org.beetl.sql.ext.spring4.BeetlSqlScannerConfigurer;
 import org.beetl.sql.ext.spring4.SqlManagerFactoryBean;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternUtils;
@@ -66,10 +69,14 @@ public class BeetlSqlConfig {
 
     //配置数据库
     @Bean(name = "datasource")
-    public DataSource getDataSource() {
-        return DataSourceBuilder.create().url("jdbc:mysql://192.168.1.4:3306/bing-upms").username("root").password("ikingtech2018").build();
+    public DataSource getDataSource(Environment env) {
+        HikariDataSource ds = new HikariDataSource();
+        ds.setJdbcUrl(env.getProperty("spring.datasource.url"));
+        ds.setUsername(env.getProperty("spring.datasource.username"));
+        ds.setPassword(env.getProperty("spring.datasource.password"));
+        ds.setDriverClassName(env.getProperty("spring.datasource.driverClassName"));
+        return ds;
     }
-
     @Bean(name = "sqlManagerFactoryBean")
     @Primary
     public SqlManagerFactoryBean getSqlManagerFactoryBean(@Qualifier("datasource") DataSource datasource) {

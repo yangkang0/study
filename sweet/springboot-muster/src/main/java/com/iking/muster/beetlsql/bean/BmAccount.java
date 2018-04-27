@@ -1,4 +1,4 @@
-package com.iking.muster.beetlsql;
+package com.iking.muster.beetlsql.bean;
 
 import lombok.Data;
 

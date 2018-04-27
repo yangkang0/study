@@ -1,0 +1,152 @@
+13.1. 定界符号
+默认的定界符号是@ 和 回车。
+里面可以放控制语句，表达式等语，
+占位符号是##,占位符号默认是输出？，并在执行sql的传入对应的值。
+如果想在占位符号输出变量值，则需要使用text函数
+
+@if(!isEmpty(name)){
+	and name = #name#
+}
+
+
+如果想修改定界符，可以增加一个/btsql-ext.properties. 设置如下属性
+
+DELIMITER_PLACEHOLDER_START=#
+DELIMITER_PLACEHOLDER_END=#
+DELIMITER_STATEMENT_START=@
+DELIMITER_STATEMENT_END=
+
+
+13.2. 变量
+通过程序传入的变量叫全局变量，可以在sql模板里使用，也可以定义变量，如
+
+@var count = 3;
+@var status = {"a":1}  //json变量
+
+13.3. 算数表达式
+同js，如a+1-b%30, i++ 等
+select * from user where name like #'%'+name+'%'#
+
+13.4. 逻辑表达式
+    有“&&” “	  ，还有 “！”，分别表示与，或，非， beetl也支持三元表达式
+
+13.5. 控制语句
+    if else 这个同java，c，js。
+    for,循环语句，如for(id:ids){}
+
+    select * from user where status in (
+    @for(id in ids){
+    #id#  #text(idLP.last?"":"," )#
+    @}
+    注意
+    变量名＋LP 是一个内置变量，包含了循环状态，具体请参考beetl文档，text方法表示直接输出文本而不是符号“？”
+    关于 sql中的in，可以使用内置的join方法更加方便
+
+13.6. 访问变量属性
+    如果是对象，直接访问属性名，user.name
+    如果是Map，用key访问 map[“key”];
+    如果是数组或者list，用索引访问，如list[1],list[i];
+    可以直采用java方式访问变量的方法和属性，如静态类Constatns
+    public class Constatns{
+        public static int 	RUNNING = 0;
+        public static User getUser(){}
+    }
+    直接以java方式访问，需要再变量符号前加上@，可以在模板里访问
+
+    select * from user where status = #@Constatns.RUNNING# and id = #@Constatns.getUser().getId()#
+注意，如果Constants 类 没有导入进beetl，则需要带包名，导入beetl方法是配置IMPORT_PACKAGE=包名.;包名.
+
+13.7. 判断对象非空
+    可以采用isEmpty判断变量表达式是否为空(为null)，是否存在，如果是字符串，是否是空字符串，如
+
+    if(isEmpty(user)||isEmpty(role.name))
+    也可以用传统方法判断，如
+    if(user==null) or if(role.name!=null))
+
+    变量有可能不存在，可用hasH函数或者需要使用安全输出符号，如
+    if(null==user.name!))
+    //or
+    if(has(user))
+    变量表达式后面跟上”!” 表示如果变量不存在，则为！后面的值，如果！后面没有值，则为null
+
+13.8. 调用方法
+    同js，唯一值得注意的是，在占位符里调用text方法，会直接输出变量而不是“？”，其他以db开头的方式也是这样。
+    架构师可以设置SQLPlaceholderST.textFunList.add(xxxx) 来决定那些方法在占位符号里可以直接输出文本而不是符号”?”
+    beetl提供了很多内置方法，如print，debug,isEmpty,date等，具体请参考文档
+13.9. 自定义方法
+    通过配置btsql-ext.properties, 可以注册自己定义的方法在beetlsql里使用，
+    如注册一个返回当前年份的函数，可以在btsql-ext.properties加如下代码
+    FN.db.year= com.xxx.YearFunction
+    这样在模板里,可以调用db.year() 获得当前年份。YearFunction 需要实现Function的 call方法，如下是个简单代码
+    public class YearFunction implements Function{
+    	public String call(Object[] paras, Context ctx){
+    		return "2015";
+    	}
+    }
+13.10. 内置方法
+    print println 输出，同js，如print(“table1”);
+    has， 判断是否有此全局变量;
+    isEmpty 判断表达式是否为空，不存在，空字符串，空集合都返回true;
+    debug 将变量输出到控制台，如 debug(user);
+    text 输出，但可用于占位符号里
+    page 函数，用于在PageQuery翻页里，根据上下问决定输出count(1) 或者count(*),如果有参数，则按照参数输出
+    join, 用逗号连接集合或者数组，并输出？，用于in，如
+            select * from user where status in ( #join(ids)#)
+            			-- 输出成  select * from user where status in (?,?,?)
+    use 参数是同一个md文件的sqlid，类似mybatis的 sql功能，如
+        condtion
+        ===
+        where 1=1 and name = #name#
+
+        selectUser
+        ===
+        select * from user #use("condition")#
+    globalUse 参数是其他文件的globalUse，如globalUse(“share.accessControl”),将访问share.md(sql)文件的accessControl片段
+    db.dynamicSql类似use功能,但第一个参数是sql片段，而不是sqlId
+        queryUsers
+        ===
+        @ var sql = "id=#xxx#";
+        select #page("*")# from user where 1=1 and #db.dynamicSql(sql,{xxx:1})#
+    page 用于pagequery,但beetlsql 使用pagequery查询,会将sql模板翻译成带有count(1),和列表名的俩个sql语句,因此必须使用page函数或者pageTag标签
+        queryNewUser
+        ===
+        select #page()# from user
+
+
+13.11. 标签功能
+    beetlsql 提供了trim标签函数，用于删除标签体最后一个逗号，这可以帮助拼接条件sql，如
+    updateStatus
+    ===
+    update user set
+    @trim(){
+        @if(!isEmpty(age){
+            age = #age# ,
+        @} if(!isEmpty(status){
+            status = #status#,
+        @}
+    @}
+    where id = #id#
+
+pageTag,同page函数,用于pageQuery,如
+    queryNewUser
+    ===
+    select
+    @pageTag(){
+        id,name,status
+    @}
+    from user
+pageIgnoreTag，该标签的作用是在生成分页查询的count语句时，忽略sql语句里的某些内容，如：order by 。pageIgnoreTag与pageTag标签组合使用，组合如下
+    queryNewUser
+    ===
+    select
+    @pageTag(){
+        id,name,status
+    @}
+    from user
+    @pageIgnoreTag(){
+        order by a.createTime
+    @}
+    因为count语句，无需要排序语句部分，而且，有些数据库，如SQLServer并不支持count语句被排序，因此可以使用pageIgnoreTag来解决夸数据库问题
+
+
+
